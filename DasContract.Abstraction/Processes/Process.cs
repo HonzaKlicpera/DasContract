@@ -1,9 +1,9 @@
 ﻿using DasContract.Abstraction.Processes.Events;
 using DasContract.Abstraction.Processes.Gateways;
+using DasContract.Abstraction.Processes.Tasks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace DasContract.Abstraction.Processes
 {
