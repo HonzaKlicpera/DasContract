@@ -12,7 +12,7 @@ namespace DasContract.Abstraction.Processes
         public string Id { get; set; }
 
         public IDictionary<string, SequenceFlow> SequenceFlows { get; set; } = new Dictionary<string, SequenceFlow>(); 
-        public IDictionary<string, IProcessElement> ProcessElements { get; set; } = new Dictionary<string, IProcessElement>();
+        public IDictionary<string, ProcessElement> ProcessElements { get; set; } = new Dictionary<string, ProcessElement>();
         
         public IEnumerable<Task> Tasks { get { return ProcessElements.Values.OfType<Task>(); } }
         public IEnumerable<Event> Events { get { return ProcessElements.Values.OfType<Event>(); } }

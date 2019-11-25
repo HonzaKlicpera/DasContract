@@ -74,9 +74,9 @@ namespace DasContract.Abstraction.Processes
             return sequenceFlow;
         }
 
-        static IProcessElement CreateProcessElement(XElement xElement)
+        static ProcessElement CreateProcessElement(XElement xElement)
         {
-            IProcessElement processElement;
+            ProcessElement processElement;
 
             switch (xElement.Name.ToString())
             {

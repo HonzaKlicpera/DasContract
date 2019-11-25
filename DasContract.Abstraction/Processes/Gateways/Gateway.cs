@@ -2,14 +2,8 @@
 
 namespace DasContract.Abstraction.Processes.Gateways
 {
-    public abstract class Gateway : IProcessElement
+    public abstract class Gateway : ProcessElement
     {
-        public string Id { get; set; }
-
-        public IList<string> Incoming { get; set; } = new List<string>();
-        public IList<string> Outgoing { get; set; } = new List<string>();
-
         public string DefaultSequenceFlowId { get; set; }
-
     }
 }
