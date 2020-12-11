@@ -11,7 +11,7 @@ using System.Xml.Linq;
 
 namespace DasContract.Abstraction.Processes
 {
-    public class ProcessFactory
+    public class ProcessParser
     {
         public const string BPMNNS = "{http://www.omg.org/spec/BPMN/20100524/MODEL}";
         public const string CAMNS = "{http://camunda.org/schema/1.0/bpmn}";

@@ -7,7 +7,7 @@ using System.Xml.Linq;
 
 namespace DasContract.Abstraction
 {
-    public class ContractFactory
+    public class ContractParser
     {
         public static Contract FromDasFile(string dasXml)
         {
@@ -19,8 +19,8 @@ namespace DasContract.Abstraction
             if (xContractName != null)
                 contract.Name = xContractName.Value;
 
-            contract.Processes = ProcessFactory.ParseProcesses(xDoc.Descendants("Process"));
-            contract.DataTypes = DataTypeFactory.ParseDataTypes(xDoc.Descendants("DataModel").First());
+            contract.Processes = ProcessParser.ParseProcesses(xDoc.Descendants("Process"));
+            contract.DataTypes = DataModelParser.ParseDataTypes(xDoc.Descendants("DataModel").First());
             return contract;
         }
     }

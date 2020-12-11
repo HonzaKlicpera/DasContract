@@ -1,14 +1,14 @@
-﻿using System;
+﻿using DasContract.Abstraction.Data;
+using DasContract.Abstraction.Exceptions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Linq;
-using DasContract.Abstraction.Data;
-using DasContract.Abstraction.Exceptions;
 using Enum = DasContract.Abstraction.Data.Enum;
 
 namespace DasContract.DasContract.Abstraction.Data
 {
-    public class DataTypeFactory
+    public class DataModelParser
     {
 
         public static IDictionary<string, DataType> ParseDataTypes(XElement xDataModel)
@@ -32,7 +32,7 @@ namespace DasContract.DasContract.Abstraction.Data
                     dataType = ParseEnum(xElement);
                 }
 
-                if(dataType != null)
+                if (dataType != null)
                 {
                     dataTypes.Add(dataType.Id, dataType);
                 }
@@ -66,7 +66,7 @@ namespace DasContract.DasContract.Abstraction.Data
             IList<Property> properties = new List<Property>();
             var xPropertiesElements = xProperties.Elements();
 
-            foreach(var xPropertyElement in xPropertiesElements)
+            foreach (var xPropertyElement in xPropertiesElements)
             {
                 properties.Add(ParseEntityProperty(xPropertyElement));
             }
@@ -121,7 +121,7 @@ namespace DasContract.DasContract.Abstraction.Data
         private static IList<string> ParseEnumValues(XElement xEnumValues)
         {
             var enumValues = new List<string>();
-            foreach(var xEnumValue in xEnumValues.Elements())
+            foreach (var xEnumValue in xEnumValues.Elements())
             {
                 if (xEnumValue.Name == "EnumValue")
                     enumValues.Add(xEnumValue.Value);
@@ -151,27 +151,27 @@ namespace DasContract.DasContract.Abstraction.Data
 
             foreach (var xPropertyElement in xPropertyElements)
             {
-                if(xPropertyElement.Name == "Id")
+                if (xPropertyElement.Name == "Id")
                 {
                     property.Id = xPropertyElement.Value;
                 }
-                else if(xPropertyElement.Name == "Name")
+                else if (xPropertyElement.Name == "Name")
                 {
                     property.Name = xPropertyElement.Value;
                 }
-                else if(xPropertyElement.Name == "IsMandatory")
+                else if (xPropertyElement.Name == "IsMandatory")
                 {
                     property.IsMandatory = bool.Parse(xPropertyElement.Value);
                 }
 
-                else if(xPropertyElement.Name == "Type")
+                else if (xPropertyElement.Name == "Type")
                 {
                     if (System.Enum.TryParse(xPropertyElement.Value, out PropertyType propertyType))
                         property.PropertyType = propertyType;
                     else
                         throw new ParseException($"{xPropertyElement.Value} is not a valid property type");
-                }    
-                else if(xPropertyElement.Name == "DataType")
+                }
+                else if (xPropertyElement.Name == "DataType")
                 {
                     property.DataType = ParsePropertyDataType(xPropertyElement.Value);
                 }
@@ -179,7 +179,7 @@ namespace DasContract.DasContract.Abstraction.Data
                 {
                     property.KeyDataType = ParsePropertyDataType(xPropertyElement.Value);
                 }
-                else if(xPropertyElement.Name == "EntityId")
+                else if (xPropertyElement.Name == "EntityId")
                 {
                     property.ReferencedDataType = xPropertyElement.Value;
                 }
@@ -189,7 +189,7 @@ namespace DasContract.DasContract.Abstraction.Data
 
         private static PropertyDataType ParsePropertyDataType(string dataTypeValue)
         {
-            switch(dataTypeValue.ToLower())
+            switch (dataTypeValue.ToLower())
             {
                 case "number":
                     return PropertyDataType.Int;
@@ -216,6 +216,6 @@ namespace DasContract.DasContract.Abstraction.Data
         {
             return string.Join("", str.Split(default(string[]), StringSplitOptions.RemoveEmptyEntries));
         }
-        
+
     }
 }
