@@ -30,63 +30,58 @@ namespace DasContract.Abstraction.Processes
         public static Process ParseProcess(XElement xProcess)
         {
             var process = new Process();
-            var processElements = xProcess.Descendants();
 
             process.Id = xProcess.Element("Id").Value;
             var isExecutable = xProcess.Element("IsExecutable");
             if (isExecutable != null)
                 process.IsExecutable = bool.Parse(isExecutable.Value);
 
-            foreach (var e in processElements)
+            var xProcessDescendants = xProcess.Descendants();
+            foreach (var xProcessDescendant in xProcessDescendants)
             {
-                if (e.Name == "ContractSequenceFlow")
+                if (xProcessDescendant.Name == "ContractSequenceFlow")
                 {
-                    var sequenceFlow = CreateSequenceFlow(e);
+                    var sequenceFlow = CreateSequenceFlow(xProcessDescendant);
                     process.SequenceFlows.Add(sequenceFlow.Id, sequenceFlow);
                 }
-                else if (e.Name == "ContractProcessElement")
+                else if (xProcessDescendant.Name == "ContractProcessElement")
                 {
-                    var processElement = CreateProcessElement(e);
-                    if (processElement != null)
-                    {
-                        process.ProcessElements.Add(processElement.Id, processElement);
-                    }
+                    var processElement = CreateProcessElement(xProcessDescendant);
+                    process.ProcessElements.Add(processElement.Id, processElement);
                 }
             }
             return process;
         }
 
-        static SequenceFlow CreateSequenceFlow(XElement sequenceFlowXElement)
+        static SequenceFlow CreateSequenceFlow(XElement xSequenceFlow)
         {
             var sequenceFlow = new SequenceFlow();
 
-            var idAttr = sequenceFlowXElement.Descendants("Id").FirstOrDefault();
-            var nameAtrr = sequenceFlowXElement.Descendants("Name").FirstOrDefault();
-            var sourceIdAttr = sequenceFlowXElement.Descendants("SourceId").FirstOrDefault();
-            var targetIdAttr = sequenceFlowXElement.Descendants("TargetId").FirstOrDefault();
+            var xIdElement = xSequenceFlow.Element("Id");
+            var xNameElement = xSequenceFlow.Element("Name");
+            var xSourceElement = xSequenceFlow.Element("SourceId");
+            var xTargetElement = xSequenceFlow.Element("TargetId");
 
-            if (idAttr != null)
-                sequenceFlow.Id = idAttr.Value;
+            if (xIdElement != null)
+                sequenceFlow.Id = xIdElement.Value;
             else
-                throw new InvalidElementException("ID must be set on every element");
+                throw new InvalidElementException($"Sequence flow at line {ContractParser.GetLineNumber(xSequenceFlow)} is missing an ID");
 
-            if (sourceIdAttr != null)
-                sequenceFlow.SourceId = sourceIdAttr.Value;
+            if (xSourceElement != null)
+                sequenceFlow.SourceId = xSourceElement.Value;
             else
-                throw new InvalidElementException("Sequence " + idAttr + " does not have a source");
+                throw new InvalidElementException($"Sequence flow at line {ContractParser.GetLineNumber(xSequenceFlow)} is missing a source");
 
-            if (targetIdAttr != null)
-                sequenceFlow.TargetId = targetIdAttr.Value;
-
+            if (xTargetElement != null)
+                sequenceFlow.TargetId = xTargetElement.Value;
             else
-                throw new InvalidElementException("Sequence " + idAttr + " does not have a target");
+                throw new InvalidElementException($"Sequence flow at line {ContractParser.GetLineNumber(xSequenceFlow)} is missing a target");
 
-            if (nameAtrr != null)
+            if (xNameElement != null)
             {
-                sequenceFlow.Name = nameAtrr.Value;
-                sequenceFlow.Condition = nameAtrr.Value;
+                sequenceFlow.Name = xNameElement.Value;
+                sequenceFlow.Condition = xNameElement.Value;
             }
-
             return sequenceFlow;
         }
 
@@ -94,8 +89,12 @@ namespace DasContract.Abstraction.Processes
         static ProcessElement CreateProcessElement(XElement xElement)
         {
             ProcessElement processElement;
+            var xElementAttribute = xElement.Attribute(XMLNS + "type");
 
-            switch (xElement.Attribute(XMLNS + "type").Value)
+            if (xElementAttribute == null)
+                throw new InvalidElementException($"Mandatory attribute for a process element not found at line {ContractParser.GetLineNumber(xElement)}");
+
+            switch (xElementAttribute.Value)
             {
                 case "ContractBusinessRuleTask":
                     processElement = CreateBusinessRuleTask(xElement);
@@ -121,26 +120,20 @@ namespace DasContract.Abstraction.Processes
                 case "ContractParallelGateway":
                     processElement = CreateParallelGateway(xElement);
                     break;
-                default:
-                    processElement = null;
+                case "ContractTimerBoundaryEvent":
+                    processElement = CreateTimeBoundaryEvent(xElement);
                     break;
+                case "ContractCallActivity":
+                    processElement = CreateCallActivity(xElement);
+                    break;
+                default:
+                    throw new InvalidElementException($"{xElementAttribute.Value} is not a valid process element type at line {ContractParser.GetLineNumber(xElement)}");
             }
 
-            if (processElement != null)
-            {
-                processElement.Incoming = GetDescendantList(xElement, "Incoming");
-                processElement.Outgoing = GetDescendantList(xElement, "Outgoing");
-            }
+            
 
             return processElement;
         }
-
-        /*
-        static TaskInstanceType GetTaskInstanceType(XElement xElement)
-        {
-            
-        }
-        */
 
         static IList<string> GetDescendantList(XElement xElement, string descendantName)
         {
@@ -154,11 +147,111 @@ namespace DasContract.Abstraction.Processes
             return descendantList;
         }
 
+        static void FillCommonProcessElementAttributes(ProcessElement processElement, XElement xElement)
+        {
+            processElement.Id = GetProcessId(xElement);
+            processElement.Name = RemoveWhitespaces(GetProcessName(xElement));
+            processElement.Incoming = GetDescendantList(xElement, "Incoming");
+            processElement.Outgoing = GetDescendantList(xElement, "Outgoing");
+        }
+
+        static void FillCommonTaskAttributes(Task task, XElement xElement)
+        {
+            FillCommonProcessElementAttributes(task, xElement);
+
+            var xInstanceType = xElement.Element("InstanceType");
+            if (xInstanceType == null)
+                task.InstanceType = InstanceType.Single;
+            else if (Enum.TryParse(xInstanceType.Value, out InstanceType parsedInstanceType))
+                task.InstanceType = parsedInstanceType;
+            else
+                throw new InvalidElementException($"{xInstanceType.Value} is not a valid instance type value at line" +
+                    $"{ContractParser.GetLineNumber(xInstanceType)}");
+
+            var xLoopCardinality = xElement.Element("LoopCardinality");
+            if(xLoopCardinality != null)
+            {
+                if (int.TryParse(xLoopCardinality.Value, out var parsedLoopCardinality))
+                    task.LoopCardinality = parsedLoopCardinality;
+                else
+                    throw new InvalidElementException($"loop cardinality at {ContractParser.GetLineNumber(xInstanceType)} " +
+                        $"must be an integer");
+            }
+
+            var xLoopCollection = xElement.Element("LoopCollection");
+            if (xLoopCollection != null)
+                task.LoopCollection = xLoopCollection.Value;
+        }
+
+        static void FillCommonPayableTaskAttributes(PayableTask payableTask, XElement xElement)
+        {
+            FillCommonTaskAttributes(payableTask, xElement);
+
+            var xTokenOperationType = xElement.Element("OperationType");
+            if (xTokenOperationType == null)
+                payableTask.OperationType = TokenOperationType.None;
+            else if (Enum.TryParse(xTokenOperationType.Value, out TokenOperationType parsedTokenOperationType))
+                payableTask.OperationType = parsedTokenOperationType;
+            else
+                throw new InvalidElementException($"{xTokenOperationType.Value} is not a valid token operation type value at line" +
+                    $"{ContractParser.GetLineNumber(xTokenOperationType)}");
+        }
+
+        static string GetAttachedToElement(XElement xElement, bool mandatory = true)
+        {
+            var xAttachedTo = xElement.Element("AttachedTo");
+            if (xAttachedTo != null)
+                return xAttachedTo.Value;
+            if (mandatory)
+                throw new InvalidElementException($"Element at line {ContractParser.GetLineNumber(xElement)} " +
+                    $"is missing attached to definition");
+            return null;
+        }
+
+        static CallActivity CreateCallActivity(XElement xElement)
+        {
+            var callActivity = new CallActivity();
+            FillCommonTaskAttributes(callActivity, xElement);
+
+            var xCalledElement = xElement.Element("CalledElement");
+            if(xCalledElement == null)
+                throw new InvalidElementException($"CallActivity at line {ContractParser.GetLineNumber(xElement)} " +
+                    $"is missing called element definition");
+            callActivity.CalledElement = xCalledElement.Value;
+
+            return callActivity;
+        }
+
+        static TimerBoundaryEvent CreateTimeBoundaryEvent(XElement xElement)
+        {
+            var timerBoundaryEvent = new TimerBoundaryEvent();
+
+            FillCommonProcessElementAttributes(timerBoundaryEvent, xElement);
+            timerBoundaryEvent.AttachedTo = GetAttachedToElement(xElement);
+
+            var xTimerDefinitionType = xElement.Element("DefinitionType");
+            if (xTimerDefinitionType == null)
+                throw new InvalidElementException($"Timer event at line {ContractParser.GetLineNumber(xElement)} " +
+                    $"is missing timer definition type");
+            if (Enum.TryParse(xTimerDefinitionType.Value, out TimerDefinitionType parsedDefinitionType))
+                timerBoundaryEvent.TimerDefinitionType = parsedDefinitionType;
+            else
+                throw new InvalidElementException($"{xTimerDefinitionType.Value} is not a valid timer definition type at " +
+                    $"line {ContractParser.GetLineNumber(xTimerDefinitionType)}");
+
+            var xTimerDefinition = xElement.Element("Definition");
+            if(xTimerDefinition == null)
+                throw new InvalidElementException($"Timer event at line {ContractParser.GetLineNumber(xElement)} " +
+                    $"is missing timer definition");
+            timerBoundaryEvent.TimerDefinition = xTimerDefinition.Value;
+
+            return timerBoundaryEvent;
+        }
+
         static ScriptTask CreateScriptTask(XElement xElement)
         {
             var task = new ScriptTask();
-            task.Id = GetProcessId(xElement);
-            task.Name = RemoveWhitespaces(GetProcessName(xElement));
+            FillCommonPayableTaskAttributes(task, xElement);
 
             var xScript = xElement.Element("Script");
             if (xScript != null)
@@ -188,8 +281,7 @@ namespace DasContract.Abstraction.Processes
         static UserTask CreateUserTask(XElement xElement)
         {
             var task = new UserTask();
-            task.Id = GetProcessId(xElement);
-            task.Name = RemoveWhitespaces(GetProcessName(xElement));
+            FillCommonPayableTaskAttributes(task, xElement);
             task.Assignee = GetProcessAssignee(xElement);
 
             var xScript = xElement.Element("Script");
@@ -221,23 +313,21 @@ namespace DasContract.Abstraction.Processes
         static ExclusiveGateway CreateExclusiveGateway(XElement xElement)
         {
             var gateway = new ExclusiveGateway();
-            gateway.Id = GetProcessId(xElement);
-            gateway.Name = RemoveWhitespaces(GetProcessName(xElement));
+            FillCommonProcessElementAttributes(gateway, xElement);
             return gateway;
         }
 
         static ParallelGateway CreateParallelGateway(XElement xElement)
         {
             var gateway = new ParallelGateway();
-            gateway.Id = GetProcessId(xElement);
-            gateway.Name = RemoveWhitespaces(GetProcessName(xElement));
+            FillCommonProcessElementAttributes(gateway, xElement);
             return gateway;
         }
 
         static EndEvent CreateEndEvent(XElement xElement)
         {
             var endEvent = new EndEvent();
-            endEvent.Id = GetProcessId(xElement);
+            FillCommonProcessElementAttributes(endEvent, xElement);
 
             return endEvent;
         }
@@ -245,16 +335,16 @@ namespace DasContract.Abstraction.Processes
         static StartEvent CreateStartEvent(XElement xElement)
         {
             var startEvent = new StartEvent();
-            startEvent.Id = GetProcessId(xElement);
+            FillCommonProcessElementAttributes(startEvent, xElement);
             return startEvent;
         }
 
         static string GetProcessId(XElement xElement)
         {
-            if (xElement.Descendants("Id").ToList().Count == 0)
-                throw new InvalidElementException("ID must be set on every element");
-
-            return xElement.Descendants("Id").First().Value;
+            var xIdElement = xElement.Element("Id");
+            if (xIdElement == null)
+                throw new InvalidElementException($"Id not set for process element on line {ContractParser.GetLineNumber(xElement)}");
+            return xIdElement.Value;
         }
 
         static string RemoveWhitespaces(string str)

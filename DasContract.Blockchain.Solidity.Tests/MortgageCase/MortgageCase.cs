@@ -13,8 +13,7 @@ namespace DasContract.Blockchain.Solidity.Tests.MortgageCase
         [Fact]
         public void Convert()
         {
-            var fileContent = File.ReadAllText("C:\\Users\\Johny\\Downloads\\mortgage.dascontract");
-            var contract = ContractParser.FromDasFile(fileContent);
+            var contract = ContractParser.FromDasFile("C:\\Users\\Johny\\Downloads\\mortgage.dascontract");
             var contractConverter = new ContractConverter(contract);
             contractConverter.ConvertContract();
             File.WriteAllText("C:\\Users\\Johny\\Downloads\\mortgage.sol", contractConverter.GetSolidityCode()); 

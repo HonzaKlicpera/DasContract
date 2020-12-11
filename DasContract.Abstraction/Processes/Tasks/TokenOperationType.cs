@@ -6,6 +6,7 @@ namespace DasContract.Abstraction.Processes.Tasks
 {
     public enum TokenOperationType
     {
+        None,
         Create,
         Send,
         Receive
