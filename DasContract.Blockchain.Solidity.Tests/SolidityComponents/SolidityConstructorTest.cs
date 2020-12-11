@@ -12,7 +12,7 @@ namespace DasContractTests.DasContract.Blockchain.Solidity.SolidityComponents
             SolidityConstructor constructor = new SolidityConstructor();
 
             var actual = constructor.ToString();
-            var expected = "constructor () public payable{\n}\n";
+            var expected = "constructor() public payable{\n}\n";
 
             Assert.Equal(expected, actual);
         }
@@ -25,7 +25,7 @@ namespace DasContractTests.DasContract.Blockchain.Solidity.SolidityComponents
             constructor.AddToBody(new SolidityStatement("a = 2"));
 
             var actual = constructor.ToString();
-            var expected = "constructor () public payable{\n\ta = 2;\n}\n";
+            var expected = "constructor() public payable{\n\ta = 2;\n}\n";
 
             Assert.Equal(expected, actual);
         }

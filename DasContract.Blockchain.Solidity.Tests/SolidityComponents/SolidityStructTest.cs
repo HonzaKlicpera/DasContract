@@ -34,7 +34,7 @@ namespace DasContractTests.DasContract.Blockchain.Solidity.SolidityComponents
         public void ToStringTest()
         {
             SolidityStruct st = GetSampleStruct();
-            string expected = "struct Foo{\n" +
+            string expected = "struct foo{\n" +
                 "\tstring bar;\n" +
                  "}\n"; //+
                  //"Foo foo = Foo({bar: \"\"});\n";
