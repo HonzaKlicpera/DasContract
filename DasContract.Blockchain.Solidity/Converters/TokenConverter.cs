@@ -93,18 +93,41 @@ namespace DasContract.Blockchain.Solidity.Converters
         /// <returns></returns>
         public SolidityStatement GetConstructorStatement()
         {
+            if (!IsOriginalToken())
+            {
+                return new SolidityStatement($"{token.ToVariableName()} = {GetParentTokenName()}({token.Address})");
+            }
             return new SolidityStatement($"{token.ToVariableName()} = " +
-                $"new {token.ToStructureName()}(\"{token.Name}\",\"{token.Symbol}\")");
+                    $"new {token.ToStructureName()}(\"{token.Name}\",\"{token.Symbol}\")");
         }
 
         public SolidityStatement GetTokenVariableStatement()
         {
+            if(!IsOriginalToken())
+            {
+                return new SolidityStatement($"{GetParentTokenName()} {token.ToVariableName()}");
+            }
             return new SolidityStatement($"{token.ToStructureName()} {token.ToVariableName()}");
         }
 
         public SolidityContract GetTokenContract()
         {
             return tokenContract;
+        }
+
+        private string GetParentTokenName()
+        {
+            if (token.IsFungible)
+                return ConverterConfig.FUNGIBLE_TOKEN_NAME;
+            else
+                return ConverterConfig.NON_FUNGIBLE_TOKEN_NAME;
+        }
+
+        //Indicates whether the token contract should be created alongside the main contract, or whether
+        //it is already deployed and should be only imported
+        public bool IsOriginalToken()
+        {
+            return token.Address == null;
         }
     }
 }

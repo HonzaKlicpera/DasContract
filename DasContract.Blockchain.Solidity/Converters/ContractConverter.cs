@@ -30,7 +30,8 @@ namespace DasContract.Blockchain.Solidity.Converters
         public ContractConverter(Contract contract)
         {
             Contract = contract;
-            mainSolidityContract = new SolidityContract(contract.Id);
+            var contractName = contract.Name == null ? contract.Id : contract.Name;
+            mainSolidityContract = new SolidityContract(contractName);
 
             DataModelConverter = new DataModelConverter(this);
             CreateProcessConverters();
@@ -118,8 +119,10 @@ namespace DasContract.Blockchain.Solidity.Converters
         {
             //Convert data model logic
             DataModelConverter.ConvertLogic();
+
             //Add enum and struct definitions to the main contract
             mainSolidityContract.AddComponents(DataModelConverter.GetMainContractComponents());
+            mainSolidityContract.AddComponent(CreateAddressMapping());
             //Convert all processes and add their logic to the main contract
             foreach (var processConverter in processConverters.Values)
             {
@@ -127,6 +130,8 @@ namespace DasContract.Blockchain.Solidity.Converters
                 mainSolidityContract.AddComponents(processConverter.GetGeneratedSolidityComponents());
             }
         }
+
+
 
         public void AddProcessConverter(ProcessConverter processConverter)
         {
@@ -159,6 +164,15 @@ namespace DasContract.Blockchain.Solidity.Converters
             }
 
             return liquidCol;
+        }
+
+        SolidityStatement CreateAddressMapping()
+        {
+            var mappingStatement = new SolidityMappingStatement(
+                "string",
+                "address",
+                ConverterConfig.ADDRESS_MAPPING_VAR_NAME);
+            return new SolidityStatement(mappingStatement.ToString());
         }
 
         public string GetSolidityCode()

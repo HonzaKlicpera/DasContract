@@ -66,7 +66,7 @@ namespace DasContract.Blockchain.Solidity.Tests.ElectionsCase
                     Name = "PoliticalParties",
                     DataType = PropertyDataType.Reference,
                     PropertyType = PropertyType.Dictionary,
-                    KeyType = PropertyDataType.Address,
+                    KeyDataType = PropertyDataType.Address,
                     ReferencedDataType = "Entity_3"
                 },
                 new Property
@@ -75,7 +75,7 @@ namespace DasContract.Blockchain.Solidity.Tests.ElectionsCase
                     Name = "Candidates",
                     DataType = PropertyDataType.Reference,
                     PropertyType = PropertyType.Dictionary,
-                    KeyType = PropertyDataType.Address,
+                    KeyDataType = PropertyDataType.Address,
                     ReferencedDataType = "Entity_4"
                 },
                 new Property

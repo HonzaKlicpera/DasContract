@@ -76,11 +76,11 @@ contract Contract {
         }
     }
 
-	uint256 call_Activity_1Counter;
+	uint256 countryElectionsCallActivityCounter;
 
 	uint256 approveCandidatesCounter;
 
-	uint256 user_Task_2Counter;
+	uint256 registerNewCandidateCounter;
 
 	uint256 registerNewPartyCounter;
 
@@ -187,12 +187,12 @@ contract Contract {
         politicalPartiesKeys.push(msg.sender);
 	}
 
-	modifier isUser_Task_2State{
-		require(isStateActiveProcess_1("User_Task_2") == true);
+	modifier isRegisterNewCandidateState{
+		require(isStateActiveProcess_1("RegisterNewCandidate") == true);
 		_;
 	}
 
-	function User_Task_2(address partyId, string memory name, string memory website) isUser_Task_2State() public {
+	function RegisterNewCandidate(address partyId, string memory name, string memory website) isRegisterNewCandidateState() public {
 		require(touchTimer_Boundary_Event_2());
 		PoliticalParty storage party = politicalParties[partyId];
         //check whether a party exists
@@ -231,31 +231,31 @@ contract Contract {
 		approveCandidatesCounter++;
 		if(approveCandidatesCounter >= politicalPartiesKeys.length){
 			Process_1ActiveStates["ApproveCandidates"] = false;
-			Script_Task_2();
+			StartCountryElections();
 		}
 	}
 
-	function Script_Task_2() internal {
+	function StartCountryElections() internal {
 		CountryElections storage cz = countries[0];
 
         cz.voters.push(0x5B38Da6a701c568545dCfcB03FcB875f56beddC4);
         CountryElections storage ge = countries[1];
         ge.voters.push(0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2); 
-		Process_1ActiveStates["Call_Activity_1"] = true;
-		Call_Activity_1();
+		Process_1ActiveStates["CountryElectionsCallActivity"] = true;
+		CountryElectionsCallActivity();
 	}
 
-	function Call_Activity_1() internal {
-		call_Activity_1Counter = 0;
+	function CountryElectionsCallActivity() internal {
+		countryElectionsCallActivityCounter = 0;
 		for(uint256 call_Activity_1Identifier = 0; call_Activity_1Identifier < countries.length; call_Activity_1Identifier++){ 
 			Call_Activity_1_Script_Task_3(call_Activity_1Identifier);
 		}
 	}
 
-	function Call_Activity_1ReturnLogic() internal {
-		call_Activity_1Counter++;
-		if(call_Activity_1Counter >= countries.length){
-			Process_1ActiveStates["Call_Activity_1"] = false;
+	function CountryElectionsCallActivityReturnLogic() internal {
+		countryElectionsCallActivityCounter++;
+		if(countryElectionsCallActivityCounter >= countries.length){
+			Process_1ActiveStates["CountryElectionsCallActivity"] = false;
 			Process_1ActiveStates["End_Event_1"] = true;
 		}
 	}
@@ -263,15 +263,15 @@ contract Contract {
 	function touchTimer_Boundary_Event_1() isRegisterNewPartyState() public returns(bool){
 		if(now > partyRegistrationEnd){
 			Process_1ActiveStates["RegisterNewParty"] = false;
-			Process_1ActiveStates["User_Task_2"] = true;
+			Process_1ActiveStates["RegisterNewCandidate"] = true;
 			return false;
 		}
 		return true;
 	}
 
-	function touchTimer_Boundary_Event_2() isUser_Task_2State() public returns(bool){
+	function touchTimer_Boundary_Event_2() isRegisterNewCandidateState() public returns(bool){
 		if(now > candidateRegistrationEnd){
-			Process_1ActiveStates["User_Task_2"] = false;
+			Process_1ActiveStates["RegisterNewCandidate"] = false;
 			approveCandidatesCounter = 0;
 			Process_1ActiveStates["ApproveCandidates"] = true;
 			return false;
@@ -282,7 +282,7 @@ contract Contract {
 	function touchTimer_Boundary_Event_3() isApproveCandidatesState() public returns(bool){
 		if(now > candidateApprovalEnd){
 			Process_1ActiveStates["ApproveCandidates"] = false;
-			Script_Task_2();
+			StartCountryElections();
 			return false;
 		}
 		return true;
@@ -359,7 +359,7 @@ contract Contract {
 	function Call_Activity_1_Script_Task_6(uint256 call_Activity_1Identifier) internal {
 		
 		Process_2_Call_Activity_1ActiveStates[call_Activity_1Identifier]["Call_Activity_1_End_Event_2"] = true;
-		Call_Activity_1ReturnLogic();
+		CountryElectionsCallActivityReturnLogic();
 	}
 
  }

@@ -53,12 +53,13 @@ namespace DasContract.Blockchain.Solidity.Converters
 
         public LiquidCollection TokenContractsToLiquid()
         {
-            var collection = new LiquidCollection();
+            var tokenContracts = new LiquidCollection();
             foreach (var tokenConverter in tokenConverters)
             {
-                collection.Add(tokenConverter.GetTokenContract().ToLiquidString(0));
+                if(tokenConverter.IsOriginalToken())
+                    tokenContracts.Add(tokenConverter.GetTokenContract().ToLiquidString(0));
             }
-            return collection;
+            return tokenContracts;
         }
 
         void ConvertEnums()
@@ -105,7 +106,7 @@ namespace DasContract.Blockchain.Solidity.Converters
                 propertyStatement.Add($"{propertyType} {propertyName}");
             else if (property.PropertyType == PropertyType.Dictionary)
             {
-                var keyType = Helpers.PrimitivePropertyTypeToString(property.KeyType);
+                var keyType = Helpers.PrimitivePropertyTypeToString(property.KeyDataType);
                 propertyStatement.Add(ConversionTemplates.MappingTypeVariableDefinition(propertyName, keyType, propertyType));
                 //Also an an array to store the key values (used when iteration through the mapping is required)
                 propertyStatement.Add($"{keyType}[] {ConversionTemplates.MappingKeysArrayName(propertyName)}");

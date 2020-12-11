@@ -27,10 +27,9 @@ namespace DasContract.Blockchain.Solidity.Converters.Tasks
 
         public override void ConvertElementLogic()
         {
-            /*
             if (IsAddressGuardRequired())
                 addressGuard = CreateAddressGuard();
-            */
+
             stateGuard = CreateStateGuard();
             mainFunction = CreateElementMainFunction();
 
@@ -97,10 +96,8 @@ namespace DasContract.Blockchain.Solidity.Converters.Tasks
             function.AddModifier($"{ConversionTemplates.StateGuardModifierName(GetElementCallName())}({processConverter.GetIdentifierNames()})");
             function.AddParameters(processConverter.GetIdentifiersAsParameters());
 
-            /*
             if (IsAddressGuardRequired())
                 function.AddModifier($"{ConversionTemplates.AddressGuardModifierName(GetElementCallName())}({processConverter.GetIdentifierNames()})");
-            */
 
             boundaryEventCalls.ForEach(c => function.AddToBody(c));
 
