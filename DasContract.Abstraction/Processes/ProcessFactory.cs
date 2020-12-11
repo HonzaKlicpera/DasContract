@@ -17,15 +17,25 @@ namespace DasContract.Abstraction.Processes
         public const string CAMNS = "{http://camunda.org/schema/1.0/bpmn}";
         public const string XMLNS = "{http://www.w3.org/2001/XMLSchema-instance}";
 
-        public static Process FromDasFile(string processXml)
+        public static IList<Process> ParseProcesses(IEnumerable<XElement> xProcesses)
         {
-            return FromDasFile(XElement.Parse(processXml));
+            var processes = new List<Process>();
+            foreach(var xProcess in xProcesses)
+            {
+                processes.Add(ParseProcess(xProcess));
+            }
+            return processes;
         }
 
-        public static Process FromDasFile(XElement bpmnXElement)
+        public static Process ParseProcess(XElement xProcess)
         {
-            Process process = new Process();
-            var processElements = bpmnXElement.Descendants().ToList();
+            var process = new Process();
+            var processElements = xProcess.Descendants();
+
+            process.Id = xProcess.Element("Id").Value;
+            var isExecutable = xProcess.Element("IsExecutable");
+            if (isExecutable != null)
+                process.IsExecutable = bool.Parse(isExecutable.Value);
 
             foreach (var e in processElements)
             {
@@ -43,7 +53,6 @@ namespace DasContract.Abstraction.Processes
                     }
                 }
             }
-
             return process;
         }
 
@@ -151,9 +160,9 @@ namespace DasContract.Abstraction.Processes
             task.Id = GetProcessId(xElement);
             task.Name = RemoveWhitespaces(GetProcessName(xElement));
 
-            var scriptList = xElement.Descendants("Script").ToList();
-            if (scriptList.Count == 1)
-                task.Script = scriptList.First().Value;
+            var xScript = xElement.Element("Script");
+            if (xScript != null)
+                task.Script = xScript.Value;
             else
                 throw new InvalidElementException("script task " + task.Id + " must contain a script");
 
@@ -182,6 +191,10 @@ namespace DasContract.Abstraction.Processes
             task.Id = GetProcessId(xElement);
             task.Name = RemoveWhitespaces(GetProcessName(xElement));
             task.Assignee = GetProcessAssignee(xElement);
+
+            var xScript = xElement.Element("Script");
+            if (xScript != null)
+                task.ValidationScript = xScript.Value;
 
             var formElement = xElement.Descendants("Form").FirstOrDefault();
             if (formElement != null)

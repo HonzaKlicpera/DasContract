@@ -11,7 +11,7 @@
         /// <summary>
         /// The keytype in case of PropertyType=PropertyType.Dictionary
         /// </summary>
-        public PropertyDataType KeyType { get; set; }
+        public PropertyDataType KeyDataType { get; set; }
         public PropertyDataType DataType { get; set; }
         /// <summary>
         /// A linked entity's id in case of Type=PropertyDataType.Entity. 

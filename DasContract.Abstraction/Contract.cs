@@ -8,6 +8,7 @@ namespace DasContract.Abstraction
     public class Contract
     {
         public string Id { get; set; }
+        public string Name { get; set; }
         /// <summary>
         /// BPMN 2.0 XML with process description and a visual process information. 
         /// </summary>

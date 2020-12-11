@@ -3,115 +3,219 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Linq;
 using DasContract.Abstraction.Data;
+using DasContract.Abstraction.Exceptions;
+using Enum = DasContract.Abstraction.Data.Enum;
 
 namespace DasContract.DasContract.Abstraction.Data
 {
     public class DataTypeFactory
     {
-        //TODO: Refactor entity factory
-        /*
-        public static List<Entity> FromDasFile(string processXml)
-        {
-            return FromDasFile(XElement.Parse(processXml));
-        }
 
-        public static List<Entity> FromDasFile(XElement xElement)
+        public static IDictionary<string, DataType> ParseDataTypes(XElement xDataModel)
         {
-            List<Entity> entities = new List<Entity>();
-            var entityElements = xElement.Descendants().ToList();
+            IDictionary<string, DataType> dataTypes = new Dictionary<string, DataType>();
+            var xDataTypeElements = xDataModel.Descendants();
 
-            foreach (var e in entityElements)
+            foreach (var xElement in xDataTypeElements)
             {
-                if (e.Name == "ContractEntity")
+                DataType dataType = null;
+                if (xElement.Name == "ContractEntity")
                 {
-                    Entity entity = new Entity();
-                    var contractElements = e.Descendants().ToList();
+                    dataType = ParseEntity(xElement);
+                }
+                else if (xElement.Name == "ContractToken")
+                {
+                    dataType = ParseToken(xElement);
+                }
+                else if (xElement.Name == "ContractEnum")
+                {
+                    dataType = ParseEnum(xElement);
+                }
 
-                    foreach (var i in contractElements)
-                    {
-                        if (i.Name == "Name" && i.Ancestors().First().Name == "ContractEntity")
-                            entity.Name = RemoveWhitespaces(i.Value);
-                        else if (i.Name == "Id" && i.Ancestors().First().Name == "ContractEntity")
-                            entity.Id = i.Value;
-                        else if (i.Name == "PrimitiveContractProperty" || i.Name == "ReferenceContractProperty")
-                            entity.Properties.Add(GetEntityProperty(i));
-                    }
-                    entities.Add(entity);
+                if(dataType != null)
+                {
+                    dataTypes.Add(dataType.Id, dataType);
                 }
             }
-
-            FillReferences(entities);
-            return entities;
+            return dataTypes;
         }
 
-        private static void FillReferences(List<Entity> entities)
+        private static Entity ParseEntity(XElement xEntity)
         {
-            foreach(var e in entities)
+            Entity entity = new Entity();
+
+            var xEntityElements = xEntity.Elements();
+            FillCommonDataTypeProperties(xEntityElements, entity);
+
+            foreach (var xEntityElement in xEntityElements)
             {
-                foreach(var p in e.Properties)
+                if (xEntityElement.Name == "IsRootEntity")
                 {
-                    if (p.DataType == PropertyDataType.Entity && p.ReferencedDataType != null)
-                    {
-                        foreach (var en in entities)
-                        {
-                            if(en.Id == p.ReferencedDataType.Id)
-                            {
-                                p.ReferencedDataType = en;
-                            }
-                        }
-                    }
+                    entity.IsRootEntity = bool.Parse(xEntityElement.Value);
+                }
+                if (xEntityElement.Name == "PrimitiveProperties" || xEntityElement.Name == "ReferenceProperties")
+                {
+                    entity.Properties = entity.Properties.Union(ParseEntityProperties(xEntityElement)).ToList();
+                }
+            }
+            return entity;
+        }
+
+        private static IList<Property> ParseEntityProperties(XElement xProperties)
+        {
+            IList<Property> properties = new List<Property>();
+            var xPropertiesElements = xProperties.Elements();
+
+            foreach(var xPropertyElement in xPropertiesElements)
+            {
+                properties.Add(ParseEntityProperty(xPropertyElement));
+            }
+
+            return properties;
+        }
+
+        private static Token ParseToken(XElement xToken)
+        {
+            Token token = new Token();
+
+            var xEntityDescendants = xToken.Descendants().ToList();
+            FillCommonDataTypeProperties(xEntityDescendants, token);
+
+            foreach (var xContractElement in xEntityDescendants)
+            {
+                if (xContractElement.Name == "PrimitiveContractProperty" || xContractElement.Name == "ReferenceContractProperty")
+                    token.Properties.Add(ParseEntityProperty(xContractElement));
+                else if (xContractElement.Name == "Symbol")
+                    token.Symbol = xContractElement.Value;
+                else if (xContractElement.Name == "Address")
+                    token.Address = xContractElement.Value;
+                else if (xContractElement.Name == "IsFungible")
+                    token.IsFungible = bool.Parse(xContractElement.Value);
+                else if (xContractElement.Name == "IsIssued")
+                    token.IsIssued = bool.Parse(xContractElement.Value);
+                else if (xContractElement.Name == "MintScript")
+                    token.MintScript = xContractElement.Value;
+                else if (xContractElement.Name == "TransferScript")
+                    token.TransferScript = xContractElement.Value;
+            }
+            return token;
+        }
+
+        private static Enum ParseEnum(XElement xEnum)
+        {
+            var @enum = new Enum();
+
+            var xEnumElements = xEnum.Elements();
+            FillCommonDataTypeProperties(xEnumElements, @enum);
+
+            foreach (var xContractElement in xEnumElements)
+            {
+                if (xContractElement.Name == "EnumValues")
+                {
+                    @enum.Values = ParseEnumValues(xContractElement);
+                }
+            }
+            return @enum;
+        }
+
+        private static IList<string> ParseEnumValues(XElement xEnumValues)
+        {
+            var enumValues = new List<string>();
+            foreach(var xEnumValue in xEnumValues.Elements())
+            {
+                if (xEnumValue.Name == "EnumValue")
+                    enumValues.Add(xEnumValue.Value);
+            }
+            return enumValues;
+        }
+
+        private static void FillCommonDataTypeProperties(IEnumerable<XElement> xDataTypeDescendants, DataType dataType)
+        {
+            foreach (var xContractElement in xDataTypeDescendants)
+            {
+                if (xContractElement.Name == "Name")
+                {
+                    dataType.Name = RemoveWhitespaces(xContractElement.Value);
+                }
+                else if (xContractElement.Name == "Id")
+                {
+                    dataType.Id = xContractElement.Value;
                 }
             }
         }
 
-        private static Property GetEntityProperty(XElement element)
+        private static Property ParseEntityProperty(XElement xProperty)
         {
             Property property = new Property();
-            property.Id = element.Descendants("Id").FirstOrDefault().Value;
-            property.Name = RemoveWhitespaces(element.Descendants("Name").FirstOrDefault().Value);
-            if (element.Descendants("IsMandatory").FirstOrDefault().Value == "False")
+            var xPropertyElements = xProperty.Elements();
+
+            foreach (var xPropertyElement in xPropertyElements)
             {
-                property.IsMandatory = false;
-            }
-            if (element.Descendants("EntityId").FirstOrDefault() != null)
-            {
-                property.ReferencedDataType = new Entity();
-                property.ReferencedDataType.Id = element.Descendants("EntityId").FirstOrDefault().Value;
-            }
-            var type = element.Descendants("Type").FirstOrDefault().Value;
-            switch (type)
-            {
-                // TODO: Fill the rest
-                case "ReferenceCollection":
-                    property.DataType = PropertyDataType.Entity;
-                    property.IsCollection = true;
-                    break;
-                case "SingleReference":
-                    property.DataType = PropertyDataType.Entity;
-                    break;
-                case "Number":
-                    property.DataType = PropertyDataType.Uint;
-                    break;
-                case "Address":
-                    property.DataType = PropertyDataType.Address;
-                    break;
-                case "AddressPayable":
-                    property.DataType = PropertyDataType.AddressPayable;
-                    break;
-                case "Bool":
-                    property.DataType = PropertyDataType.Bool;
-                    break;
-                default:
-                    property.DataType = PropertyDataType.String;
-                    break;
+                if(xPropertyElement.Name == "Id")
+                {
+                    property.Id = xPropertyElement.Value;
+                }
+                else if(xPropertyElement.Name == "Name")
+                {
+                    property.Name = xPropertyElement.Value;
+                }
+                else if(xPropertyElement.Name == "IsMandatory")
+                {
+                    property.IsMandatory = bool.Parse(xPropertyElement.Value);
+                }
+
+                else if(xPropertyElement.Name == "Type")
+                {
+                    if (System.Enum.TryParse(xPropertyElement.Value, out PropertyType propertyType))
+                        property.PropertyType = propertyType;
+                    else
+                        throw new ParseException($"{xPropertyElement.Value} is not a valid property type");
+                }    
+                else if(xPropertyElement.Name == "DataType")
+                {
+                    property.DataType = ParsePropertyDataType(xPropertyElement.Value);
+                }
+                else if (xPropertyElement.Name == "KeyDataType")
+                {
+                    property.KeyDataType = ParsePropertyDataType(xPropertyElement.Value);
+                }
+                else if(xPropertyElement.Name == "EntityId")
+                {
+                    property.ReferencedDataType = xPropertyElement.Value;
+                }
             }
             return property;
         }
+
+        private static PropertyDataType ParsePropertyDataType(string dataTypeValue)
+        {
+            switch(dataTypeValue.ToLower())
+            {
+                case "number":
+                    return PropertyDataType.Int;
+                case "bool":
+                    return PropertyDataType.Bool;
+                case "text":
+                    return PropertyDataType.String;
+                case "reference":
+                    return PropertyDataType.Reference;
+                case "address":
+                    return PropertyDataType.Address;
+                case "addresspayable":
+                    return PropertyDataType.AddressPayable;
+                case "positivenumber":
+                    return PropertyDataType.Uint;
+                case "datetime":
+                    return PropertyDataType.DateTime;
+            }
+            throw new ParseException($"Cannot convert {dataTypeValue} to a valid datatype");
+        }
+
 
         private static string RemoveWhitespaces(string str)
         {
             return string.Join("", str.Split(default(string[]), StringSplitOptions.RemoveEmptyEntries));
         }
-        */
+        
     }
 }

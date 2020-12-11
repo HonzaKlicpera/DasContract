@@ -13,11 +13,14 @@ namespace DasContract.Abstraction
         {
             var contract = new Contract();
             var xDoc = XDocument.Parse(dasXml);
-            var process = xDoc.Descendants("Main").First();
-            var dataModel = xDoc.Descendants("DataModel").First();
-            contract.Process = ProcessFactory.FromDasFile(process);
-            //TODO: Refactor entity factory
-            //contract.DataTypes = DataTypeFactory.FromDasFile(dataModel);
+            var xEditorContract = xDoc.Element("EditorContract");
+            contract.Id = xEditorContract.Element("Id").Value;
+            var xContractName = xEditorContract.Element("Name");
+            if (xContractName != null)
+                contract.Name = xContractName.Value;
+
+            contract.Processes = ProcessFactory.ParseProcesses(xDoc.Descendants("Process"));
+            contract.DataTypes = DataTypeFactory.ParseDataTypes(xDoc.Descendants("DataModel").First());
             return contract;
         }
     }
